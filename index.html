@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14112b">
+<title>Vozario - Grabadora de voz online</title>
+<meta name="description" content="Graba tu voz desde el navegador, recorta, aplica efectos y descarga en MP3 o WAV. Todo se procesa en tu dispositivo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14112b; --bg-2:#1c1838; --card:#221d44; --card-2:#2b2554; --line:#ffffff1c;
+  --text:#f4f2ff; --sub:#b3adda; --muted:#9a94c4;
+  --rec:#ff4d6d; --rec-2:#ff7a90; --accent:#7c6cff; --accent-2:#9d91ff; --ok:#3ddc97; --warn:#ffc04d;
+  --wave:#8f84ff; --wave-dim:#4a437e;
+  --r:16px; --font:"Onest",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(1200px 600px at 50% -10%,#2d2570 0,transparent 60%),var(--bg);color:var(--text);font:400 15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+a{color:var(--accent-2)}
+.hidden{display:none!important}
+svg{display:block;fill:currentColor}
+
+header{max-width:960px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.3px;margin-right:auto}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--rec),var(--accent));display:grid;place-items:center}
+.logo-mark svg{width:18px;height:18px;fill:#fff}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--sub);background:#ffffff0d;transition:.15s}
+.icon-btn:hover{color:var(--text);background:#ffffff1a}
+.icon-btn svg{width:20px;height:20px}
+
+main{max-width:960px;margin:0 auto;padding:0 20px 40px}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.15;letter-spacing:-.8px;text-align:center;margin:18px 0 6px}
+.lead{text-align:center;color:var(--sub);margin:0 auto 26px;max-width:560px}
+
+.card{background:linear-gradient(180deg,var(--card),var(--bg-2));border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 80px #0006}
+.stage{padding:34px 24px;min-height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+
+/* idle */
+.rec-big{width:132px;height:132px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--rec-2),var(--rec));display:grid;place-items:center;
+  border:8px solid #2f2860;box-shadow:0 14px 34px #00000080;transition:transform .15s}
+.rec-big:hover{transform:scale(1.04)}
+.rec-big:active{transform:scale(.97)}
+.rec-big svg{width:52px;height:52px;fill:#fff}
+.prompt{color:var(--sub);font-weight:500}
+.meter{width:min(280px,70vw);height:6px;border-radius:3px;background:#ffffff14;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok),var(--warn) 75%,var(--rec));transition:width .06s}
+.device-line{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.device-line button{color:var(--accent-2);font-weight:600}
+
+/* recording */
+.timer{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.rec-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--rec);margin-right:10px;vertical-align:middle;animation:blink 1s infinite}
+.paused .rec-dot{animation:none;background:var(--warn)}
+@keyframes blink{50%{opacity:.25}}
+canvas.live{width:100%;max-width:820px;height:120px;display:block}
+.controls{display:flex;align-items:center;gap:16px}
+.ctl{width:62px;height:62px;border-radius:50%;background:#ffffff14;display:grid;place-items:center;transition:.15s}
+.ctl:hover{background:#ffffff24}
+.ctl svg{width:26px;height:26px}
+.ctl.stop{width:76px;height:76px;background:var(--rec)}
+.ctl.stop:hover{background:var(--rec-2)}
+.ctl.stop svg{width:28px;height:28px;fill:#fff}
+
+/* editor */
+.editor{padding:22px}
+.ed-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.ed-head h2{font-size:18px;margin:0;margin-right:auto}
+.pill{font-size:13px;color:var(--sub);background:#ffffff0f;border-radius:999px;padding:4px 12px;font-variant-numeric:tabular-nums}
+.wave-wrap{position:relative;background:#0d0b1f;border-radius:14px;border:1px solid var(--line);touch-action:none}
+canvas.wave{width:100%;height:170px;display:block;cursor:pointer}
+.times{display:flex;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}
+.time-field{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub)}
+.time-field input{width:92px;background:#0d0b1f;border:1px solid var(--line);border-radius:10px;padding:6px 8px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text)}
+.transport{display:flex;align-items:center;justify-content:center;gap:14px;margin:16px 0 6px}
+.play{width:64px;height:64px;border-radius:50%;background:var(--accent);display:grid;place-items:center;box-shadow:0 8px 20px #00000066;transition:.15s}
+.play:hover{background:var(--accent-2);transform:scale(1.04)}
+.play svg{width:26px;height:26px;fill:#fff}
+.tr-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--sub);background:#ffffff0d}
+.tr-btn:hover{color:var(--text);background:#ffffff1a}
+.tr-btn svg{width:20px;height:20px}
+
+.fx{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+@media (max-width:820px){.fx{grid-template-columns:1fr}}
+.fx-card{background:#ffffff08;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.fx-card.off .fx-body{pointer-events:none}
+.fx-card.off .fx-body input,.fx-card.off .fx-body select{opacity:.45}
+.fx-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fx-top b{margin-right:auto;font-weight:700}
+.switch{width:42px;height:24px;border-radius:12px;background:#ffffff26;position:relative;transition:.15s;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+.switch.on{background:var(--accent)}.switch.on::after{left:21px}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px;color:var(--sub)}
+.row label{width:96px;flex:none}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{width:58px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+select.sel{width:100%;background:#0d0b1f;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.master{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:12px;padding:12px 16px;background:#ffffff08;border:1px solid var(--line);border-radius:var(--r)}
+.master .row{flex:1;min-width:240px;margin:0}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--sub);cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+
+.export{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.export select{width:auto;min-width:110px}
+.btn{height:44px;padding:0 20px;border-radius:12px;font-weight:700;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn svg{width:18px;height:18px}
+.btn.primary{background:var(--ok);color:#06281a}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:#ffffff0f;color:var(--sub)}
+.btn.ghost:hover{background:#ffffff1c;color:var(--text)}
+.btn:disabled{opacity:.6;cursor:progress}
+.export .spacer{flex:1}
+.progress{height:4px;border-radius:2px;background:#ffffff14;overflow:hidden;width:100%;margin-top:10px}
+.progress i{display:block;height:100%;width:0;background:var(--ok);transition:width .1s}
+
+/* error */
+.err-icon{width:72px;height:72px;border-radius:50%;background:#ff4d6d22;color:var(--rec);display:grid;place-items:center}
+.err-icon svg{width:34px;height:34px}
+.err h2{margin:0;font-size:22px;text-align:center}
+.err p{margin:0;color:var(--sub);text-align:center;max-width:460px}
+
+/* features */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+@media (max-width:820px){.features{grid-template-columns:1fr}}
+.feat{padding:18px;border-radius:var(--r);background:#ffffff06;border:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center}
+.feat .ic{color:var(--accent-2)}
+.feat .ic svg{width:18px;height:18px}
+.feat h3{margin:0;font-size:15px}
+.feat p{grid-column:1/-1;margin-top:6px!important}
+.feat p{margin:0;color:var(--sub);font-size:14px}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 20px 30px}
+
+/* modal */
+.modal-back{position:fixed;inset:0;background:#05040fcc;display:none;place-items:center;padding:16px;z-index:50}
+.modal-back.open{display:grid}
+.modal{width:min(460px,100%);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px}
+.modal h2{margin:0 0 14px;font-size:20px;display:flex;align-items:center}
+.modal h2 span{margin-right:auto}
+.set{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.set:last-of-type{border:0}
+.set div small{display:block;color:var(--muted);font-size:12px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#fff;color:#14112b;font-weight:600;padding:10px 18px;border-radius:12px;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-1.56a8 8 0 0 1-7-7.94 1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg></span>Vozario</div>
+  <button class="icon-btn" id="settingsBtn" title="Ajustes del micrófono" aria-label="Ajustes del micrófono"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.7 7.7 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.7 7.7 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.7h4l.4-2.7a7.7 7.7 0 0 0 1.7-1l2.5 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+</header>
+
+<main>
+  <h1>Grabadora de voz online</h1>
+  <p class="lead">Graba desde tu micrófono, recorta lo que sobra, dale color con efectos y descárgalo en MP3 o WAV. Gratis y sin subir nada a internet.</p>
+
+  <section class="card">
+    <!-- idle -->
+    <div class="stage" id="stIdle">
+      <button class="rec-big" id="recBtn" aria-label="Empezar a grabar"><svg viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-1.56a8 8 0 0 1-7-7.94 1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg></button>
+      <div class="prompt" id="idlePrompt">Pulsa el botón para empezar a grabar</div>
+      <div class="meter hidden" id="idleMeter"><i></i></div>
+      <div class="device-line hidden" id="deviceLine"><span id="deviceName"></span>·<button id="changeMic">Cambiar</button></div>
+    </div>
+
+    <!-- recording -->
+    <div class="stage hidden" id="stRec">
+      <div class="timer" id="recTimer"><span class="rec-dot"></span><span id="recTime">0:00.0</span></div>
+      <canvas class="live" id="liveWave"></canvas>
+      <div class="controls">
+        <button class="ctl" id="pauseBtn" title="Pausar" aria-label="Pausar"></button>
+        <button class="ctl stop" id="stopBtn" title="Detener" aria-label="Detener grabación"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+        <button class="ctl" id="discardRecBtn" title="Descartar" aria-label="Descartar grabación"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4zm-3 6h12l-1 12H7z"/></svg></button>
+      </div>
+    </div>
+
+    <!-- editor -->
+    <div class="editor hidden" id="stEdit">
+      <div class="ed-head">
+        <h2>Tu grabación</h2>
+        <span class="pill" id="edInfo"></span>
+        <button class="btn ghost" id="newBtn"><svg viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 6.93 8h2.02A9 9 0 1 1 12 3v-2l4 3-4 3z"/></svg>Nueva grabación</button>
+      </div>
+      <div class="wave-wrap"><canvas class="wave" id="wave"></canvas></div>
+      <div class="times">
+        <div class="time-field">Inicio <input id="tStart" inputmode="decimal"></div>
+        <div class="time-field">Posición <input id="tPos" inputmode="decimal"></div>
+        <div class="time-field">Fin <input id="tEnd" inputmode="decimal"></div>
+      </div>
+      <div class="transport">
+        <button class="tr-btn" id="toStart" title="Ir al inicio" aria-label="Ir al inicio"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zm3 7 9-7v14z"/></svg></button>
+        <button class="play" id="playBtn" aria-label="Reproducir"></button>
+        <button class="tr-btn" id="loopBtn" title="Repetir selección" aria-label="Repetir selección"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg></button>
+      </div>
+
+      <div class="fx">
+        <div class="fx-card off" data-fx="eq">
+          <div class="fx-top"><b>Ecualizador</b><button class="switch" data-toggle="eq" aria-label="Activar ecualizador"></button></div>
+          <div class="fx-body">
+            <select class="sel" id="eqPreset">
+              <option value="flat">Plano</option><option value="voice">Voz clara</option><option value="warm">Cálida</option>
+              <option value="bright">Brillante</option><option value="radio">Radio antigua</option><option value="podcast">Pódcast</option><option value="custom">Personalizado</option>
+            </select>
+            <div class="row"><label>Graves</label><input type="range" min="-12" max="12" step="0.5" id="eqLow"><output id="eqLowV"></output></div>
+            <div class="row"><label>Medios</label><input type="range" min="-12" max="12" step="0.5" id="eqMid"><output id="eqMidV"></output></div>
+            <div class="row"><label>Agudos</label><input type="range" min="-12" max="12" step="0.5" id="eqHigh"><output id="eqHighV"></output></div>
+          </div>
+        </div>
+        <div class="fx-card off" data-fx="echo">
+          <div class="fx-top"><b>Eco</b><button class="switch" data-toggle="echo" aria-label="Activar eco"></button></div>
+          <div class="fx-body">
+            <div class="row"><label>Tiempo</label><input type="range" min="40" max="1200" step="10" id="echoTime"><output id="echoTimeV"></output></div>
+            <div class="row"><label>Repeticiones</label><input type="range" min="0" max="0.85" step="0.01" id="echoFb"><output id="echoFbV"></output></div>
+            <div class="row"><label>Intensidad</label><input type="range" min="0" max="1" step="0.01" id="echoMix"><output id="echoMixV"></output></div>
+          </div>
+        </div>
+        <div class="fx-card off" data-fx="rev">
+          <div class="fx-top"><b>Reverberación</b><button class="switch" data-toggle="rev" aria-label="Activar reverberación"></button></div>
+          <div class="fx-body">
+            <select class="sel" id="revType">
+              <option value="booth">Cabina de estudio</option><option value="room">Habitación</option><option value="hall">Sala de conciertos</option>
+              <option value="church">Catedral</option><option value="plate">Placa</option>
+            </select>
+            <div class="row"><label>Distancia</label><input type="range" min="0" max="1" step="0.01" id="revMix"><output id="revMixV"></output></div>
+            <div class="row"><label>Pre-retardo</label><input type="range" min="0" max="120" step="1" id="revPre"><output id="revPreV"></output></div>
+          </div>
+        </div>
+      </div>
+      <div class="master">
+        <div class="row"><label>Volumen</label><input type="range" min="-18" max="18" step="0.5" id="vol"><output id="volV"></output></div>
+        <label class="check"><input type="checkbox" id="normalize"> Normalizar al guardar</label>
+      </div>
+
+      <div class="export">
+        <select class="sel" id="fmt" aria-label="Formato"><option value="mp3">MP3</option><option value="wav">WAV</option></select>
+        <select class="sel" id="kbps" aria-label="Calidad MP3"><option value="96">96 kbps</option><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="256">256 kbps</option><option value="320">320 kbps</option></select>
+        <span class="spacer"></span>
+        <button class="btn primary" id="saveBtn"><svg viewBox="0 0 24 24"><path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4l-5.7-5.7 1.4-1.4 3.3 3.3zM4 18h16v2H4z"/></svg><span>Guardar</span></button>
+        <div class="progress hidden" id="saveProg"><i></i></div>
+      </div>
+    </div>
+
+    <!-- error -->
+    <div class="stage err hidden" id="stErr">
+      <div class="err-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V9.4L8.6 16.3A3.5 3.5 0 0 0 12 15zm8.7-11.3-1.4-1.4-16 16 1.4 1.4 3.6-3.6a8 8 0 0 0 2.7 1.3V19H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-1.56a8 8 0 0 0 7-7.94 1 1 0 1 0-2 0 6 6 0 0 1-9.2 5.1l1.5-1.5A4 4 0 0 0 12 15zM15.5 5.5a3.5 3.5 0 0 0-7 0v6c0 .3 0 .6.1.9z"/></svg></div>
+      <h2 id="errTitle"></h2>
+      <p id="errText"></p>
+      <button class="btn ghost" id="errRetry">Intentar de nuevo</button>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.6 8 11 4.6-1.4 8-6 8-11V5zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10z"/></svg></div><h3>Privado de verdad</h3><p>Tu voz nunca sale del dispositivo: la grabación, los efectos y la conversión ocurren en el navegador.</p></div>
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 10h2v4H3zm4-4h2v12H7zm4-3h2v18h-2zm4 5h2v8h-2zm4 3h2v2h-2z"/></svg></div><h3>Efectos de estudio</h3><p>Ecualizador con presets, eco y reverberación de cabina, sala o catedral, con vista previa al instante.</p></div>
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M7 4a5 5 0 1 0 0 10A5 5 0 0 0 7 4zm10 6a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" opacity=".9"/></svg></div><h3>Mono o estéreo</h3><p>Elige micrófono, activa estéreo y controla la supresión de ruido, la cancelación de eco y la ganancia automática.</p></div>
+  </section>
+</main>
+<footer>Vozario · funciona sin conexión una vez cargada · Espacio: reproducir/pausar · R: grabar</footer>
+
+<!-- settings -->
+<div class="modal-back" id="setModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2><span id="setTitle">Ajustes del micrófono</span><button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg></button></h2>
+    <div class="set" style="display:block"><div style="margin-bottom:8px">Micrófono</div><select class="sel" id="micSel"><option value="">Predeterminado del sistema</option></select></div>
+    <div class="set"><div>Supresión de ruido<small>Atenúa ventiladores, tráfico y zumbidos</small></div><button class="switch" data-opt="noiseSuppression"></button></div>
+    <div class="set"><div>Cancelación de eco<small>Útil si suena audio por altavoces</small></div><button class="switch" data-opt="echoCancellation"></button></div>
+    <div class="set"><div>Ganancia automática<small>Nivela el volumen de la voz</small></div><button class="switch" data-opt="autoGainControl"></button></div>
+    <div class="set"><div>Grabar en estéreo<small>Si tu micrófono tiene dos canales</small></div><button class="switch" data-opt="stereo"></button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================== helpers ============================== */
+const $ = s => document.querySelector(s);
+const LS = { get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch{ return d; } }, set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} } };
+let toastT; const toast = (t, ms = 2600) => { const e = $("#toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("show"), ms); };
+const fmtT = (s, dec = 1) => { if(!isFinite(s) || s < 0) s = 0; const m = Math.floor(s / 60), r = s - m * 60; return `${m}:${r.toFixed(dec).padStart(dec ? 3 + dec : 2, "0")}`; };
+const parseT = str => { const m = String(str).trim().match(/^(?:(\d+):)?(\d+(?:[.,]\d+)?)$/); if(!m) return NaN; return (+(m[1] || 0)) * 60 + parseFloat(m[2].replace(",", ".")); };
+const dbToGain = db => Math.pow(10, db / 20);
+const ICON = {
+  play:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>',
+  resume:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="#ff4d6d"/></svg>',
+};
+
+/* ============================== settings ============================== */
+const opts = Object.assign({ deviceId:"", noiseSuppression:true, echoCancellation:true, autoGainControl:true, stereo:false }, LS.get("vozario-mic", {}));
+const fx = Object.assign({
+  eq:{ on:false, preset:"flat", low:0, mid:0, high:0 },
+  echo:{ on:false, time:320, fb:0.35, mix:0.35 },
+  rev:{ on:false, type:"room", mix:0.3, pre:20 },
+  vol:0, normalize:true,
+}, LS.get("vozario-fx", {}));
+const saveFx = () => LS.set("vozario-fx", fx);
+const EQ_PRESETS = { flat:[0,0,0], voice:[-3,3,2.5], warm:[4,-1,-2], bright:[-1,1,5], radio:[-10,6,-8], podcast:[2,1.5,3] };
+const REV = { // synthetic impulse responses: seconds, decay curve, brightness
+  booth:{ len:0.45, decay:4, damp:0.55 }, room:{ len:1.1, decay:3, damp:0.45 }, hall:{ len:2.6, decay:2.2, damp:0.35 },
+  church:{ len:5, decay:1.8, damp:0.3 }, plate:{ len:1.8, decay:2.6, damp:0.08 },
+};
+
+/* ============================== state ============================== */
+let ctx = null, stream = null, srcNode = null, recNode = null, sink = null;
+let recording = false, paused = false, chunks = [], recLen = 0, recChannels = 1, peaks = [];
+let buffer = null, sel = { a:0, b:0 }, pos = 0, playing = null, loop = false, saved = true;
+const show = id => ["#stIdle", "#stRec", "#stEdit", "#stErr"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+
+/* recorder worklet: copies input frames in ~2048-sample batches and reports the peak level */
+const WORKLET = `
+class VozarioRec extends AudioWorkletProcessor{
+  constructor(){ super(); this.on=false; this.buf=null; this.n=0; this.peak=0;
+    this.port.onmessage=e=>{ if(e.data==="on") this.on=true; else if(e.data==="off"){ this.flush(); this.on=false; } }; }
+  flush(){ if(this.buf && this.n){ this.port.postMessage({ chans:this.buf.map(c=>c.slice(0,this.n)), peak:this.peak }); } else this.port.postMessage({ peak:this.peak }); this.buf=null; this.n=0; this.peak=0; }
+  process(inputs){
+    const inp=inputs[0]; if(!inp||!inp.length) return true;
+    if(!this.buf) this.buf=inp.map(()=>new Float32Array(2048));
+    const len=inp[0].length;
+    for(let c=0;c<inp.length&&c<this.buf.length;c++){ const ch=inp[c]; for(let i=0;i<len;i++){ const v=ch[i]<0?-ch[i]:ch[i]; if(v>this.peak) this.peak=v; } if(this.on) this.buf[c].set(ch, this.n); }
+    if(this.on) this.n+=len; else { this.n=0; }
+    if(this.n+128>2048 || (!this.on && (this._t=(this._t||0)+1)%16===0)) this.flush();
+    return true;
+  }
+}
+registerProcessor("vozario-rec", VozarioRec);`;
+
+/* ============================== microphone ============================== */
+const ERRORS = {
+  NotAllowedError:["Permiso de micrófono denegado", "Para grabar, permite el acceso al micrófono: pulsa el candado de la barra de direcciones, activa el micrófono y vuelve a intentarlo."],
+  SecurityError:["Permiso de micrófono denegado", "El navegador bloqueó el micrófono. Comprueba los permisos del sitio y vuelve a intentarlo."],
+  NotFoundError:["No encontramos ningún micrófono", "Conecta un micrófono o unos auriculares con micrófono y vuelve a intentarlo."],
+  NotReadableError:["El micrófono está ocupado", "Otra aplicación o pestaña podría estar usándolo. Ciérrala, o elige otro micrófono en los ajustes."],
+  OverconstrainedError:["Ese micrófono no está disponible", "El dispositivo elegido ya no está conectado. Elige otro en los ajustes."],
+  NoWebAudio:["Tu navegador no es compatible", "Esta grabadora necesita Web Audio con AudioWorklet. Prueba con una versión reciente de Chrome, Edge, Firefox o Safari."],
+  Insecure:["Hace falta una conexión segura", "Los navegadores solo permiten usar el micrófono en páginas https o en localhost."],
+};
+function showError(key, detail){
+  const [t, d] = ERRORS[key] || ["No se pudo usar el micrófono", "Ocurrió un error inesperado" + (detail ? ` (${detail})` : "") + ". Vuelve a intentarlo."];
+  $("#errTitle").textContent = t; $("#errText").textContent = d; show("#stErr");
+}
+async function ensureContext(){
+  if(!window.AudioContext || !window.AudioWorkletNode) throw Object.assign(new Error("no audio"), { name:"NoWebAudio" });
+  if(!ctx){ ctx = new AudioContext({ latencyHint:"interactive" }); await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type:"text/javascript" }))); }
+  if(ctx.state === "suspended") await ctx.resume();
+  return ctx;
+}
+async function openMic(){
+  if(!window.isSecureContext) throw Object.assign(new Error("insecure"), { name:"Insecure" });
+  await ensureContext();
+  closeMic();
+  const audio = { noiseSuppression:opts.noiseSuppression, echoCancellation:opts.echoCancellation, autoGainControl:opts.autoGainControl, channelCount:{ ideal: opts.stereo ? 2 : 1 } };
+  if(opts.deviceId) audio.deviceId = { exact:opts.deviceId };
+  stream = await navigator.mediaDevices.getUserMedia({ audio });
+  const track = stream.getAudioTracks()[0];
+  track.addEventListener("ended", () => { if(recording) stopRecording(); toast("El micrófono se desconectó"); refreshDevices(); });
+  track.addEventListener("mute", () => toast("El micrófono está silenciado por el sistema"));
+  const st = track.getSettings();
+  recChannels = Math.min(opts.stereo ? 2 : 1, st.channelCount || 1) || 1;
+  srcNode = ctx.createMediaStreamSource(stream);
+  recNode = new AudioWorkletNode(ctx, "vozario-rec", { numberOfInputs:1, numberOfOutputs:1, channelCount:recChannels, channelCountMode:"explicit", channelInterpretation:"speakers" });
+  sink = ctx.createGain(); sink.gain.value = 0; // keeps the worklet pulled without monitoring the mic
+  srcNode.connect(recNode).connect(sink).connect(ctx.destination);
+  recNode.port.onmessage = e => onBatch(e.data);
+  $("#deviceName").textContent = track.label || "Micrófono";
+  $("#deviceLine").classList.remove("hidden"); $("#idleMeter").classList.remove("hidden");
+  refreshDevices();
+}
+function closeMic(){
+  try{ srcNode?.disconnect(); recNode?.disconnect(); sink?.disconnect(); }catch{}
+  stream?.getTracks().forEach(t => t.stop()); stream = srcNode = recNode = sink = null;
+}
+async function refreshDevices(){
+  if(!navigator.mediaDevices?.enumerateDevices) return;
+  const list = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+  const s = $("#micSel"), cur = opts.deviceId;
+  s.innerHTML = `<option value="">Predeterminado del sistema</option>` + list.filter(d => d.deviceId && d.deviceId !== "default").map((d, i) => `<option value="${d.deviceId}">${(d.label || "Micrófono " + (i + 1)).replace(/[<>&]/g, "")}</option>`).join("");
+  s.value = list.some(d => d.deviceId === cur) ? cur : "";
+}
+navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
+
+/* ============================== recording ============================== */
+let levelSmooth = 0;
+function onBatch(d){
+  levelSmooth = Math.max(d.peak, levelSmooth * 0.85);
+  $("#idleMeter i").style.width = Math.min(100, Math.sqrt(levelSmooth) * 100) + "%";
+  if(!recording || paused || !d.chans) return;
+  chunks.push(d.chans); recLen += d.chans[0].length;
+  peaks.push(d.peak);
+  $("#recTime").textContent = fmtT(recLen / ctx.sampleRate);
+}
+async function startRecording(){
+  try{ if(!stream) await openMic(); }
+  catch(e){ console.warn(e); showError(e.name, e.message); return; }
+  chunks = []; recLen = 0; peaks = []; paused = false; recording = true;
+  recNode.port.postMessage("on");
+  show("#stRec"); $("#stRec").classList.remove("paused"); setPauseIcon();
+  requestWakeLock(); drawLive();
+}
+function setPauseIcon(){ $("#pauseBtn").innerHTML = paused ? ICON.resume : ICON.pause; $("#pauseBtn").title = paused ? "Continuar" : "Pausar"; }
+function togglePause(){
+  if(!recording) return; paused = !paused;
+  recNode.port.postMessage(paused ? "off" : "on");
+  $("#stRec").classList.toggle("paused", paused); setPauseIcon();
+}
+function stopRecording(){
+  if(!recording) return;
+  recNode?.port.postMessage("off");
+  recording = false; releaseWakeLock();
+  setTimeout(finishRecording, 80); // let the worklet flush its last batch
+}
+function finishRecording(){
+  if(!recLen){ toast("La grabación está vacía"); show("#stIdle"); return; }
+  const ch = chunks[0].length, b = ctx.createBuffer(ch, recLen, ctx.sampleRate);
+  for(let c = 0; c < ch; c++){ const out = b.getChannelData(c); let o = 0; for(const chunk of chunks){ out.set(chunk[c] || chunk[0], o); o += chunk[0].length; } }
+  chunks = []; closeMic(); $("#deviceLine").classList.add("hidden"); $("#idleMeter").classList.add("hidden");
+  loadBuffer(b);
+}
+function discardRecording(){
+  if(!confirm("¿Descartar esta grabación?")) return;
+  recording = false; recNode?.port.postMessage("off"); chunks = []; releaseWakeLock(); show("#stIdle");
+}
+
+/* live waveform while recording */
+function drawLive(){
+  if(!recording) return;
+  const cv = $("#liveWave"), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if(cv.width !== w * dpr){ cv.width = w * dpr; cv.height = h * dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const bar = 4, gap = 2, n = Math.floor(w / (bar + gap)), start = Math.max(0, peaks.length - n);
+  for(let i = start; i < peaks.length; i++){
+    const v = Math.max(0.02, Math.min(1, Math.sqrt(peaks[i]) * 1.1)), bh = v * (h - 8), x = (i - start) * (bar + gap);
+    g.fillStyle = paused ? "#4a437e" : i > peaks.length - 4 ? "#ff7a90" : "#8f84ff";
+    g.beginPath(); g.roundRect(x, (h - bh) / 2, bar, bh, 2); g.fill();
+  }
+  requestAnimationFrame(drawLive);
+}
+let wakeLock = null;
+async function requestWakeLock(){ try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch{} }
+function releaseWakeLock(){ try{ wakeLock?.release(); }catch{} wakeLock = null; }
+
+/* ============================== editor ============================== */
+let wavePeaks = null;
+function loadBuffer(b){
+  buffer = b; sel = { a:0, b:b.duration }; pos = 0; saved = false; wavePeaks = null;
+  $("#edInfo").textContent = `${fmtT(b.duration)} · ${b.numberOfChannels === 2 ? "Estéreo" : "Mono"} · ${(b.sampleRate / 1000).toFixed(1)} kHz`;
+  show("#stEdit"); syncFxUI(); updateTimes(); drawWave();
+}
+function computePeaks(w){
+  const data = [...Array(buffer.numberOfChannels)].map((_, c) => buffer.getChannelData(c)), n = buffer.length, step = n / w, out = new Float32Array(w * 2);
+  for(let x = 0; x < w; x++){
+    let mn = 1, mx = -1; const s = Math.floor(x * step), e = Math.min(n, Math.floor((x + 1) * step));
+    for(const d of data) for(let i = s; i < e; i += 2){ const v = d[i]; if(v < mn) mn = v; if(v > mx) mx = v; }
+    out[x * 2] = mn; out[x * 2 + 1] = mx;
+  }
+  return out;
+}
+function drawWave(){
+  if(!buffer) return;
+  const cv = $("#wave"), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if(cv.width !== Math.round(w * dpr) || !wavePeaks || wavePeaks.length !== Math.round(w) * 2){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); wavePeaks = computePeaks(Math.round(w)); }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const D = buffer.duration, xa = sel.a / D * w, xb = sel.b / D * w, mid = h / 2;
+  let maxAbs = 0.05; for(let i = 0; i < wavePeaks.length; i++) maxAbs = Math.max(maxAbs, Math.abs(wavePeaks[i]));
+  const k = (mid - 10) / maxAbs;
+  g.fillStyle = "#7c6cff14"; g.fillRect(xa, 0, xb - xa, h);
+  for(let x = 0; x < wavePeaks.length; x++){
+    const inSel = x >= xa && x <= xb, played = inSel && x < pos / D * w;
+    g.fillStyle = !inSel ? "#3a3466" : played ? "#c3bbff" : "#8f84ff";
+    const y1 = mid - wavePeaks[x * 2 + 1] * k, y2 = mid - wavePeaks[x * 2] * k;
+    g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+  }
+  // trim handles
+  for(const [x, side] of [[xa, 1], [xb, -1]]){
+    g.fillStyle = "#3ddc97"; g.fillRect(x - (side < 0 ? 2 : 0), 0, 2, h);
+    g.beginPath(); g.roundRect(side > 0 ? x : x - 12, h / 2 - 18, 12, 36, 4); g.fill();
+    g.fillStyle = "#06281a"; g.fillRect(side > 0 ? x + 4 : x - 8, h / 2 - 8, 1.5, 16); g.fillRect(side > 0 ? x + 7 : x - 5, h / 2 - 8, 1.5, 16);
+  }
+  // playhead
+  const xp = pos / D * w; g.fillStyle = "#fff"; g.fillRect(xp - 1, 0, 2, h);
+  g.beginPath(); g.moveTo(xp - 6, 0); g.lineTo(xp + 6, 0); g.lineTo(xp, 7); g.fill();
+}
+function updateTimes(){
+  if(document.activeElement !== $("#tStart")) $("#tStart").value = fmtT(sel.a, 2);
+  if(document.activeElement !== $("#tEnd")) $("#tEnd").value = fmtT(sel.b, 2);
+  if(document.activeElement !== $("#tPos")) $("#tPos").value = fmtT(pos, 2);
+}
+// waveform interaction: drag the trim handles, click to seek
+(() => {
+  const cv = $("#wave"); let drag = null;
+  const tAt = e => { const r = cv.getBoundingClientRect(); return Math.max(0, Math.min(buffer.duration, (e.clientX - r.left) / r.width * buffer.duration)); };
+  cv.addEventListener("pointerdown", e => {
+    if(!buffer) return; cv.setPointerCapture(e.pointerId);
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, xa = sel.a / buffer.duration * r.width, xb = sel.b / buffer.duration * r.width;
+    drag = Math.abs(px - xa) < 16 && Math.abs(px - xa) <= Math.abs(px - xb) ? "a" : Math.abs(px - xb) < 16 ? "b" : "pos";
+    move(e);
+  });
+  const move = e => {
+    if(!drag) return; const t = tAt(e);
+    if(drag === "a") sel.a = Math.min(t, sel.b - 0.05); else if(drag === "b") sel.b = Math.max(t, sel.a + 0.05);
+    if(drag === "pos") seek(Math.min(Math.max(t, sel.a), sel.b));
+    else { pos = Math.min(Math.max(pos, sel.a), sel.b); if(playing) restartPlayback(); }
+    updateTimes(); drawWave();
+  };
+  cv.addEventListener("pointermove", e => { if(drag) move(e); else if(buffer){ const r = cv.getBoundingClientRect(), px = e.clientX - r.left; cv.style.cursor = [sel.a, sel.b].some(t => Math.abs(px - t / buffer.duration * r.width) < 16) ? "ew-resize" : "pointer"; } });
+  cv.addEventListener("pointerup", () => drag = null); cv.addEventListener("pointercancel", () => drag = null);
+})();
+for(const [id, apply] of [["#tStart", t => { sel.a = Math.max(0, Math.min(t, sel.b - 0.05)); }], ["#tEnd", t => { sel.b = Math.min(buffer.duration, Math.max(t, sel.a + 0.05)); }], ["#tPos", t => seek(Math.min(Math.max(t, sel.a), sel.b))]]){
+  $(id).addEventListener("change", e => { const t = parseT(e.target.value); if(!isNaN(t) && buffer){ apply(t); pos = Math.min(Math.max(pos, sel.a), sel.b); } e.target.blur(); updateTimes(); drawWave(); });
+  $(id).addEventListener("keydown", e => { if(e.key === "Enter") e.target.blur(); });
+}
+addEventListener("resize", () => { wavePeaks = null; drawWave(); });
+
+/* ============================== effects chain ============================== */
+function makeIR(c, type){
+  const p = REV[type] || REV.room, len = Math.floor(p.len * c.sampleRate), ir = c.createBuffer(2, len, c.sampleRate);
+  for(let ch = 0; ch < 2; ch++){
+    const d = ir.getChannelData(ch); let lp = 0, seed = 1234 + ch * 777;
+    for(let i = 0; i < len; i++){
+      seed = (seed * 16807) % 2147483647; const n = seed / 1073741823.5 - 1;
+      lp = lp + (n - lp) * (1 - p.damp * Math.min(1, i / len * 2)); // darker tail over time
+      d[i] = lp * Math.pow(1 - i / len, p.decay) * (i < c.sampleRate * 0.004 ? i / (c.sampleRate * 0.004) : 1);
+    }
+  }
+  return ir;
+}
+function buildChain(c, f){
+  const n = {};
+  n.input = c.createGain();
+  n.low = c.createBiquadFilter(); n.low.type = "lowshelf"; n.low.frequency.value = 220;
+  n.mid = c.createBiquadFilter(); n.mid.type = "peaking"; n.mid.frequency.value = 1400; n.mid.Q.value = 0.8;
+  n.high = c.createBiquadFilter(); n.high.type = "highshelf"; n.high.frequency.value = 4500;
+  n.dry = c.createGain(); n.master = c.createGain();
+  n.delay = c.createDelay(2); n.fb = c.createGain(); n.echoWet = c.createGain();
+  n.pre = c.createDelay(0.5); n.conv = c.createConvolver(); n.conv.buffer = makeIR(c, f.rev.type); n.revWet = c.createGain(); n.revType = f.rev.type;
+  n.input.connect(n.low).connect(n.mid).connect(n.high);
+  n.high.connect(n.dry).connect(n.master);
+  n.high.connect(n.delay); n.delay.connect(n.fb).connect(n.delay); n.delay.connect(n.echoWet).connect(n.master);
+  n.high.connect(n.pre).connect(n.conv).connect(n.revWet).connect(n.master);
+  applyParams(n, f, c);
+  return n;
+}
+function applyParams(n, f, c){
+  const t = c.currentTime, set = (p, v) => p.setTargetAtTime(v, t, 0.015);
+  set(n.low.gain, f.eq.on ? f.eq.low : 0); set(n.mid.gain, f.eq.on ? f.eq.mid : 0); set(n.high.gain, f.eq.on ? f.eq.high : 0);
+  set(n.delay.delayTime, f.echo.time / 1000); set(n.fb.gain, f.echo.on ? f.echo.fb : 0); set(n.echoWet.gain, f.echo.on ? f.echo.mix : 0);
+  set(n.pre.delayTime, f.rev.pre / 1000); set(n.revWet.gain, f.rev.on ? f.rev.mix * 1.4 : 0);
+  set(n.dry.gain, f.rev.on ? 1 - f.rev.mix * 0.45 : 1);
+  set(n.master.gain, dbToGain(f.vol));
+  if(n.revType !== f.rev.type){ n.revType = f.rev.type; try{ n.conv.buffer = makeIR(c, f.rev.type); }catch{ return false; } }
+  return true;
+}
+function tailSeconds(f){ let t = 0; if(f.echo.on) t = Math.max(t, Math.min(6, f.echo.time / 1000 * Math.log(0.001) / Math.log(Math.max(0.05, f.echo.fb)) )); if(f.rev.on) t = Math.max(t, REV[f.rev.type].len + f.rev.pre / 1000); return t; }
+
+/* ============================== playback ============================== */
+async function play(){
+  if(!buffer) return; await ensureContext();
+  if(pos >= sel.b - 0.01) pos = sel.a;
+  const chain = buildChain(ctx, fx), src = ctx.createBufferSource();
+  src.buffer = buffer; src.connect(chain.input); chain.master.connect(ctx.destination);
+  const startAt = ctx.currentTime + 0.02, from = pos;
+  src.start(startAt, from, sel.b - from);
+  playing = { src, chain, startAt, from };
+  src.onended = () => { if(playing?.src !== src) return; teardown(); if(loop){ pos = sel.a; play(); } else { pos = sel.b; setPlayIcon(); updateTimes(); drawWave(); } };
+  setPlayIcon(); tick();
+}
+function teardown(){ if(!playing) return; const p = playing; playing = null; try{ p.src.onended = null; p.src.stop(); }catch{} setTimeout(() => { try{ p.chain.master.disconnect(); }catch{} }, (tailSeconds(fx) + 0.2) * 1000); }
+function pause(){ if(!playing) return; pos = Math.min(sel.b, playing.from + (ctx.currentTime - playing.startAt)); teardown(); setPlayIcon(); updateTimes(); drawWave(); }
+function restartPlayback(){ if(playing){ teardown(); play(); } }
+function seek(t){ pos = t; if(playing) restartPlayback(); else { updateTimes(); drawWave(); } }
+function setPlayIcon(){ $("#playBtn").innerHTML = playing ? ICON.pause : ICON.play; $("#playBtn").setAttribute("aria-label", playing ? "Pausar" : "Reproducir"); }
+function tick(){ if(!playing) return; pos = Math.min(sel.b, playing.from + Math.max(0, ctx.currentTime - playing.startAt)); updateTimes(); drawWave(); requestAnimationFrame(tick); }
+$("#playBtn").addEventListener("click", () => playing ? pause() : play());
+$("#toStart").addEventListener("click", () => seek(sel.a));
+$("#loopBtn").addEventListener("click", () => { loop = !loop; $("#loopBtn").style.color = loop ? "var(--ok)" : ""; toast(loop ? "Repetición activada" : "Repetición desactivada", 1400); });
+
+/* ============================== effects UI ============================== */
+const bindRange = (id, get, set, fmt) => {
+  const el = $("#" + id), out = $("#" + id + "V");
+  el.addEventListener("input", () => { set(+el.value); out.textContent = fmt(+el.value); onFxChange(); });
+  return () => { el.value = get(); out.textContent = fmt(get()); };
+};
+const dB = v => (v > 0 ? "+" : "") + v.toFixed(1) + " dB", pct = v => Math.round(v * 100) + "%";
+const syncers = [
+  bindRange("eqLow", () => fx.eq.low, v => { fx.eq.low = v; fx.eq.preset = "custom"; }, dB),
+  bindRange("eqMid", () => fx.eq.mid, v => { fx.eq.mid = v; fx.eq.preset = "custom"; }, dB),
+  bindRange("eqHigh", () => fx.eq.high, v => { fx.eq.high = v; fx.eq.preset = "custom"; }, dB),
+  bindRange("echoTime", () => fx.echo.time, v => fx.echo.time = v, v => v + " ms"),
+  bindRange("echoFb", () => fx.echo.fb, v => fx.echo.fb = v, pct),
+  bindRange("echoMix", () => fx.echo.mix, v => fx.echo.mix = v, pct),
+  bindRange("revMix", () => fx.rev.mix, v => fx.rev.mix = v, pct),
+  bindRange("revPre", () => fx.rev.pre, v => fx.rev.pre = v, v => v + " ms"),
+  bindRange("vol", () => fx.vol, v => fx.vol = v, dB),
+];
+function syncFxUI(){
+  syncers.forEach(s => s());
+  $("#eqPreset").value = fx.eq.preset; $("#revType").value = fx.rev.type; $("#normalize").checked = fx.normalize;
+  for(const k of ["eq", "echo", "rev"]){ $(`[data-toggle="${k}"]`).classList.toggle("on", fx[k].on); $(`[data-fx="${k}"]`).classList.toggle("off", !fx[k].on); }
+  $("#kbps").classList.toggle("hidden", $("#fmt").value !== "mp3");
+}
+function onFxChange(){ saveFx(); $("#eqPreset").value = fx.eq.preset; if(playing && !applyParams(playing.chain, fx, ctx)) restartPlayback(); }
+document.querySelectorAll("[data-toggle]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.toggle; fx[k].on = !fx[k].on; syncFxUI(); onFxChange(); }));
+$("#eqPreset").addEventListener("change", e => { fx.eq.preset = e.target.value; if(EQ_PRESETS[fx.eq.preset]) [fx.eq.low, fx.eq.mid, fx.eq.high] = EQ_PRESETS[fx.eq.preset]; if(!fx.eq.on){ fx.eq.on = true; } syncFxUI(); onFxChange(); });
+$("#revType").addEventListener("change", e => { fx.rev.type = e.target.value; onFxChange(); });
+$("#normalize").addEventListener("change", e => { fx.normalize = e.target.checked; saveFx(); });
+$("#fmt").addEventListener("change", () => { syncFxUI(); LS.set("vozario-fmt", { fmt:$("#fmt").value, kbps:$("#kbps").value }); });
+$("#kbps").addEventListener("change", () => LS.set("vozario-fmt", { fmt:$("#fmt").value, kbps:$("#kbps").value }));
+(() => { const f = LS.get("vozario-fmt", null); if(f){ $("#fmt").value = f.fmt; $("#kbps").value = f.kbps; } })();
+
+/* ============================== export ============================== */
+async function renderSelection(){
+  const sr = buffer.sampleRate, ch = buffer.numberOfChannels, tail = tailSeconds(fx);
+  const len = Math.ceil((sel.b - sel.a + tail) * sr);
+  const off = new OfflineAudioContext(Math.max(ch, fx.rev.on ? 2 : ch), len, sr);
+  const chain = buildChain(off, fx), src = off.createBufferSource();
+  src.buffer = buffer; src.connect(chain.input); chain.master.connect(off.destination);
+  src.start(0, sel.a, sel.b - sel.a);
+  const out = await off.startRendering();
+  const data = [...Array(out.numberOfChannels)].map((_, c) => out.getChannelData(c));
+  // drop the silent part of the effects tail
+  let end = Math.ceil((sel.b - sel.a) * sr);
+  if(tail){ for(let i = data[0].length - 1; i > end; i--){ if(data.some(d => Math.abs(d[i]) > 0.0015)){ end = i + 1; break; } } }
+  let peak = 0; for(const d of data) for(let i = 0; i < end; i++){ const v = Math.abs(d[i]); if(v > peak) peak = v; }
+  const gain = fx.normalize && peak > 0 ? 0.977 / peak : peak > 1 ? 0.999 / peak : 1;
+  return { channels:data.map(d => { const a = d.slice(0, end); if(gain !== 1) for(let i = 0; i < a.length; i++) a[i] *= gain; return a; }), sampleRate:sr };
+}
+function encodeWav({ channels, sampleRate }){
+  const n = channels[0].length, ch = channels.length, buf = new ArrayBuffer(44 + n * ch * 2), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + n * ch * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * ch * 2, true);
+  let o = 44; for(let i = 0; i < n; i++) for(let c = 0; c < ch; c++){ const s = Math.max(-1, Math.min(1, channels[c][i])); v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  return new Blob([buf], { type:"audio/wav" });
+}
+const MP3_WORKER = `
+importScripts("https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js");
+onmessage = e => {
+  const { channels, sampleRate, kbps } = e.data, ch = channels.length, n = channels[0].length;
+  const toI16 = f => { const o = new Int16Array(f.length); for(let i = 0; i < f.length; i++){ const s = Math.max(-1, Math.min(1, f[i])); o[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return o; };
+  const pcm = channels.map(toI16), enc = new lamejs.Mp3Encoder(ch, sampleRate, kbps), parts = [], block = 1152 * 8;
+  for(let i = 0; i < n; i += block){
+    const l = pcm[0].subarray(i, i + block), r = ch > 1 ? pcm[1].subarray(i, i + block) : undefined;
+    const b = ch > 1 ? enc.encodeBuffer(l, r) : enc.encodeBuffer(l); if(b.length) parts.push(new Uint8Array(b));
+    if((i / block) % 20 === 0) postMessage({ progress: i / n });
+  }
+  const end = enc.flush(); if(end.length) parts.push(new Uint8Array(end));
+  postMessage({ done: parts });
+};`;
+const MP3_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
+function resample(rendered, target){
+  // linear resampling for rates the MP3 encoder does not accept
+  const { channels, sampleRate } = rendered, ratio = sampleRate / target, n = Math.floor(channels[0].length / ratio);
+  return { sampleRate:target, channels:channels.map(d => { const o = new Float32Array(n); for(let i = 0; i < n; i++){ const x = i * ratio, j = Math.floor(x), f = x - j; o[i] = d[j] * (1 - f) + (d[j + 1] ?? d[j]) * f; } return o; }) };
+}
+function encodeMp3(rendered, kbps, onProgress){
+  if(!MP3_RATES.includes(rendered.sampleRate)) rendered = resample(rendered, 48000);
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(new Blob([MP3_WORKER], { type:"text/javascript" })), wk = new Worker(url);
+    wk.onmessage = e => { if(e.data.progress != null) onProgress(e.data.progress); if(e.data.done){ wk.terminate(); URL.revokeObjectURL(url); res(new Blob(e.data.done, { type:"audio/mpeg" })); } };
+    wk.onerror = e => { wk.terminate(); URL.revokeObjectURL(url); rej(new Error(e.message || "No se pudo cargar el codificador MP3")); };
+    wk.postMessage({ channels:rendered.channels, sampleRate:rendered.sampleRate, kbps:+kbps });
+  });
+}
+async function save(){
+  if(!buffer) return;
+  if(playing) pause();
+  const btn = $("#saveBtn"), prog = $("#saveProg"), bar = prog.firstElementChild, label = btn.querySelector("span");
+  btn.disabled = true; prog.classList.remove("hidden"); bar.style.width = "5%"; label.textContent = "Procesando…";
+  try{
+    const r = await renderSelection(); bar.style.width = "35%";
+    const fmt = $("#fmt").value;
+    const blob = fmt === "wav" ? encodeWav(r) : await encodeMp3(r, $("#kbps").value, p => bar.style.width = (35 + p * 62) + "%");
+    bar.style.width = "100%";
+    const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `grabacion-${stamp}.${fmt}`; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    saved = true; toast(`Guardado: ${a.download} (${(blob.size / 1048576).toFixed(2)} MB)`);
+    window.__lastExport = { name:a.download, size:blob.size, type:blob.type, blob };
+  }catch(e){ console.error(e); toast("No se pudo guardar: " + e.message, 4000); }
+  finally{ btn.disabled = false; label.textContent = "Guardar"; setTimeout(() => prog.classList.add("hidden"), 600); }
+}
+$("#saveBtn").addEventListener("click", save);
+
+/* ============================== wiring ============================== */
+$("#recBtn").addEventListener("click", startRecording);
+$("#pauseBtn").addEventListener("click", togglePause);
+$("#stopBtn").addEventListener("click", stopRecording);
+$("#discardRecBtn").addEventListener("click", discardRecording);
+$("#errRetry").addEventListener("click", () => { show("#stIdle"); startRecording(); });
+$("#newBtn").addEventListener("click", () => { if(!saved && !confirm("Todavía no guardaste esta grabación. ¿Empezar una nueva de todos modos?")) return; pause(); buffer = null; show("#stIdle"); });
+$("#changeMic").addEventListener("click", () => openSettings());
+$("#settingsBtn").addEventListener("click", () => openSettings());
+function openSettings(){ refreshDevices(); document.querySelectorAll("[data-opt]").forEach(b => b.classList.toggle("on", !!opts[b.dataset.opt])); $("#setModal").classList.add("open"); }
+function closeSettings(){ $("#setModal").classList.remove("open"); }
+$("#setModal").addEventListener("click", e => { if(e.target === e.currentTarget || e.target.closest("[data-close]")) closeSettings(); });
+async function micOptionChanged(){
+  LS.set("vozario-mic", opts);
+  if(stream && !recording){ try{ await openMic(); }catch(e){ closeSettings(); showError(e.name, e.message); } }
+  else if(recording) toast("Los cambios se aplicarán en la próxima grabación");
+}
+document.querySelectorAll("[data-opt]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.opt; opts[k] = !opts[k]; b.classList.toggle("on", opts[k]); micOptionChanged(); }));
+$("#micSel").addEventListener("change", e => { opts.deviceId = e.target.value; micOptionChanged(); });
+document.addEventListener("keydown", e => {
+  if(e.target.closest("input,select,textarea") || $("#setModal").classList.contains("open")) return;
+  if(e.code === "Space"){ e.preventDefault(); if(!$("#stEdit").classList.contains("hidden")) playing ? pause() : play(); else if(recording) togglePause(); }
+  else if(e.code === "KeyR" && !recording && $("#stEdit").classList.contains("hidden")) startRecording();
+  else if(e.code === "Escape") closeSettings();
+});
+addEventListener("beforeunload", e => { if(recording || (buffer && !saved)){ e.preventDefault(); e.returnValue = ""; } });
+setPlayIcon(); setPauseIcon(); syncFxUI();
+// hook for automated tests: load a synthetic recording into the editor
+window.__vozario = { loadBuffer, save, fx, get sel(){ return sel; }, ensureContext };
+</script>
+</body>
+</html>
